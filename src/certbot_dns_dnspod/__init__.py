@@ -79,7 +79,7 @@ Examples
    certbot certonly \\
      --dns-dnspod \\
      --dns-dnspod-credentials ~/.secrets/certbot/dnspod.ini \\
-     --dns-dnspod-propagation-seconds 240 \\
+     --dns-dnspod-propagation-seconds 90 \\
      -d example.com
 
 """

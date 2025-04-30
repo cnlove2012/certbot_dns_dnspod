@@ -34,19 +34,15 @@ To start using DNS authentication for dnspod, pass the following arguments on
 certbot's command line:
 
 ============================================================= ==============================================
-``--authenticator certbot-dns-dnspod:dns-dnspod``          select the authenticator plugin (Required)
+``--authenticator dns-dnspod``          select the authenticator plugin (Required)
 
-``--certbot-dns-dnspod:dns-dnspod-credentials``         DNSPod Remote User credentials
+``--dns-dnspod-credentials``         DNSPod Remote User credentials
                                                               INI file. (Required)
 
-``--certbot-dns-dnspod:dns-dnspod-propagation-seconds`` | waiting time for DNS to propagate before asking
+``--dns-dnspod-propagation-seconds`` | waiting time for DNS to propagate before asking
                                                               | the ACME server to verify the DNS record.
                                                               | (Default: 120, Recommended: >= 600)
 ============================================================= ==============================================
-
-(Note that the verbose and seemingly redundant ``certbot-dns-dnspod:`` prefix
-is currently imposed by certbot for external plugins.)
-
 
 Credentials
 -----------
@@ -55,11 +51,11 @@ An example ``credentials.ini`` file:
 
 .. code-block:: ini
 
-   certbot_dns_dnspod:dns_dnspod_secret_id = secretId
-   certbot_dns_dnspod:dns_dnspod_secret_key = secretKey
+   dns_dnspod_secret_id = secretId
+   dns_dnspod_secret_key = secretKey
 
 The path to this file can be provided interactively or using the
-``--certbot-dns-dnspod:dns-dnspod-credentials`` command-line argument. Certbot
+``--dns-dnspod-credentials`` command-line argument. Certbot
 records the path to this file for use during renewal, but does not store the
 file's contents.
 
@@ -109,21 +105,22 @@ create an empty directory with the following ``Dockerfile``:
 
 Proceed to build the image::
 
-    docker build -t certbot/dns-dnspod .
+    docker build -t cnlove2012/certbot-dns-dnspod:latest -f Dockerfile .
 
 Once that's finished, the application can be run as follows::
 
     docker run --rm \
        -v /var/lib/letsencrypt:/var/lib/letsencrypt \
-       -v /etc/letsencrypt:/etc/letsencrypt \
+       -v ./letsencrypt:/etc/letsencrypt \
        --cap-drop=all \
-       certbot/dns-dnspod certonly \
-       --authenticator certbot-dns-dnspod:dns-dnspod \
-       --certbot-dns-dnspod:dns-dnspod-propagation-seconds 90 \
-       --certbot-dns-dnspod:dns-dnspod-credentials \
-           /etc/letsencrypt/.secrets/domain.tld.ini \
+       cnlove2012/certbot-dns-dnspod:latest certonly \
+       --non-interactive \
+	   --agree-tos \
+       --authenticator dns-dnspod \
+       --dns-dnspod-propagation-seconds 90 \
+       --dns-dnspod-credentials /etc/letsencrypt/.secrets/credentials.ini \
        --no-self-upgrade \
-       --keep-until-expiring --non-interactive --expand \
+       --keep-until-expiring --expand \
        --server https://acme-v02.api.letsencrypt.org/directory \
        -d example.com -d '*.example.com'
 
