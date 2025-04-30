@@ -111,7 +111,8 @@ Once that's finished, the application can be run as follows::
 
     docker run --rm \
        -v /var/lib/letsencrypt:/var/lib/letsencrypt \
-       -v ./letsencrypt:/etc/letsencrypt \
+       -v /var/log/letsencrypt:/var/log/letsencrypt \
+       -v /etc/letsencrypt:/etc/letsencrypt \
        --cap-drop=all \
        cnlove2012/certbot-dns-dnspod:latest certonly \
        --non-interactive \
