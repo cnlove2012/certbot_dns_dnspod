@@ -83,14 +83,15 @@ To acquire a single certificate for both ``example.com`` and
 .. code-block:: bash
 
    certbot certonly \
-     --authenticator certbot-dns-dnspod:dns-dnspod \
-     --certbot-dns-dnspod:dns-dnspod-credentials /etc/letsencrypt/.secrets/domain.tld.ini \
-     --certbot-dns-dnspod:dns-dnspod-propagation-seconds 90 \
+     --authenticator dns-dnspod \
+     --dns-dnspod-credentials /etc/letsencrypt/.secrets/domain.tld.ini \
+     --dns-dnspod-propagation-seconds 90 \
      --agree-tos \
+     --expand \
+     --non-interactive
      --rsa-key-size 4096 \
      -d 'example.com' \
      -d '*.example.com'
-
 
 Docker
 ------
@@ -101,7 +102,8 @@ create an empty directory with the following ``Dockerfile``:
 .. code-block:: docker
 
     FROM certbot/certbot
-    RUN pip install certbot-dns-dnspod
+    COPY . /opt/certbot/src/plugin
+    RUN python tools/pip_install.py --no-cache-dir --editable /opt/certbot/src/plugin
 
 Proceed to build the image::
 
@@ -128,3 +130,13 @@ Once that's finished, the application can be run as follows::
 It is suggested to secure the folder as follows::
 chown root:root /etc/letsencrypt/.secrets
 chmod 600 /etc/letsencrypt/.secrets
+
+Renew::
+
+    docker run --rm \
+	    -v ./letsencrypt/lib:/var/lib/letsencrypt \
+	    -v ./letsencrypt/log:/var/log/letsencrypt \
+	    -v ./letsencrypt/conf.d:/etc/letsencrypt \
+	    cnlove2012/certbot-dns-dnspod:latest renew \
+	    --force-renewal
+
