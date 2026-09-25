@@ -1,7 +1,7 @@
 {
   "name": "Certbot DNS Plugin Dev",
   "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
-  
+
   "customizations": {
     "vscode": {
       "extensions": [
@@ -9,7 +9,7 @@
       ]
     }
   },
-  "postCreateCommand": "pip install certbot",
+  "postCreateCommand": "pip install -e '.[test]' && pip install pre-commit ruff mypy && pre-commit install",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
   "workspaceFolder": "/workspace"
 }

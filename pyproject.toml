@@ -1,0 +1,104 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "certbot-dns-dnspod"
+version = "0.1.0"
+description = "DNSPod (Tencent Cloud) DNS Authenticator plugin for Certbot"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+authors = [
+    { name = "Mr.Jackin", email = "cnlove2012@163.com" },
+]
+keywords = ["certbot", "dnspod", "tencent", "dns", "acme"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Plugins",
+    "Intended Audience :: System Administrators",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Security",
+    "Topic :: System :: Installation/Setup",
+    "Topic :: System :: Networking",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "acme>=4.0.0",
+    "certbot>=4.0.0",
+    "tencentcloud-sdk-python-dnspod>=3.0.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+Repository = "https://github.com/cnlove2012/certbot_dns_dnspod"
+Issues = "https://github.com/cnlove2012/certbot_dns_dnspod/issues"
+
+[project.entry-points."certbot.plugins"]
+dns-dnspod = "certbot_dns_dnspod._internal.dns_dnspod:Authenticator"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+certbot_dns_dnspod = ["py.typed"]
+
+# ---------------------------------------------------------------------------
+# ruff：lint 与格式化
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "RUF", # ruff 专属规则
+]
+ignore = [
+    "RUF001", # 中文项目：字符串中的全角标点合法
+    "RUF002", # 中文项目：docstring 中的全角标点合法
+    "RUF003", # 中文项目：注释中的全角标点合法
+]
+
+[tool.ruff.lint.isort]
+force-single-line = true # 匹配 certbot 官方代码的一行一导入风格
+
+# ---------------------------------------------------------------------------
+# mypy：类型检查（三方包注解不全，起步宽松）
+# ---------------------------------------------------------------------------
+[tool.mypy]
+# mypy 新版最低支持 3.10 检查目标；3.9 的语法兼容由 ruff 的 target-version=py39 把关
+python_version = "3.10"
+check_untyped_defs = true
+warn_unused_ignores = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["tencentcloud.*", "certbot.*", "acme.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["src/certbot_dns_dnspod/_internal/tests"]
+addopts = "-q"
