@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest*)",
+      "Bash(python -m pip install*)",
+      "Bash(python -m build*)",
+      "Bash(ruff *)",
+      "Bash(mypy *)",
+      "Bash(pre-commit *)",
+      "Bash(docker build*)",
+      "Bash(docker run --rm*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git branch*)"
+    ],
+    "deny": [
+      "Read(letsencrypt/**)",
+      "Read(**/*.pem)",
+      "Read(credentials.ini)",
+      "Read(**/credentials.ini)",
+      "Read(dns_pord.py)",
+      "Read(.env)"
+    ]
+  },
+  "env": {
+    "PYTHONDONTWRITEBYTECODE": "1"
+  }
+}
