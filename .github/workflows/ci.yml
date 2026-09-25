@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-test:
+    name: lint & test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.9 上 pip 自动解析 certbot 4.x；3.10+ 解析 certbot 5.x，两条主线均被覆盖
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[test]" ruff mypy
+
+      - name: Ruff lint
+        run: ruff check src/
+
+      - name: Ruff format
+        run: ruff format --check src/
+
+      - name: Mypy
+        run: mypy src/
+
+      - name: Pytest
+        run: python -m pytest -v
+
+  pre-commit:
+    name: pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - run: pip install pre-commit
+      - run: pre-commit run --all-files
+
+  docker:
+    # PR 不构建镜像（省时）；main 推送时验证镜像构建与插件注册
+    name: docker build & smoke
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build image
+        run: docker build -t certbot-dns-dnspod:ci .
+
+      - name: Smoke test（容器内 certbot 应发现 dns-dnspod 插件）
+        run: docker run --rm certbot-dns-dnspod:ci --help all 2>/dev/null | grep -A3 'dns-dnspod'
