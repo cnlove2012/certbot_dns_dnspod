@@ -38,6 +38,9 @@ tags
 *.sublime-project
 *.sublime-workspace
 
+# macOS Finder 元数据
+.DS_Store
+
 # auth --cert-path --chain-path
 # （*.pem 已在上方全目录覆盖）
 
