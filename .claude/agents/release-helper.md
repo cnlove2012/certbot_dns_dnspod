@@ -41,7 +41,7 @@ docker pull cnlove2012/certbot-dns-dnspod:<版本> && \
 - **tag/写回 push 权限错**：仓库 Settings → Actions → General →
   Workflow permissions 需允许 "Read and write"。
 - **镜像未推送**：检查 secrets `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` 是否有效
-  （未配置时 publish job 直接跳过，run 显示 skipped 而非失败）。
+  （未配置/失效时 Login 步骤直接失败报红）。
 - **build 号疑似重号**：确认 tag 列表 `git tag -l "v$(date +%G).$(date +%V).*"`，
   build 号取周内已有 tag 的 max+1；人为删除过 tag 会导致号段回缩，属预期。
 - **Docker Hub 的 latest 过旧**：找到最近一次绿色 publish run，确认其 build 步骤

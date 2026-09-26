@@ -53,7 +53,7 @@ CI（.github/workflows/ci.yml）在 Python 3.9–3.13 矩阵上跑 lint+mypy+pyt
 如 `v2026.39.1`）→ **立即推 tag**（尽早落库）→ pyproject version 写回 main
 （`chore(release)` 提交，github-actions[bot]）→ GitHub Release（自动变更说明）→
 构建推送 Docker Hub 版本镜像 + `latest` → 拉回冒烟（需仓库 secrets
-`DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`，未配置时跳过发布）。
+`DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`，未配置/失效时 Login 步骤直接报错）。
 
 发版语义要点（设计取舍，勿"修复"）：
 

@@ -1,5 +1,14 @@
 name: CI
 
+# 持续集成（只验证代码，不发版——发版见 docker-publish.yml）。
+# 触发模型：
+#   - pull_request：PR 创建 / 分支有新提交（synchronize）/ 重开时都会触发，
+#     即 PR 每次更新都重跑检查——合并前的 Checks 绿勾来源于此
+#   - push main：PR 合并后或直接 push 时跑全量矩阵
+#   - workflow_dispatch：网页手动触发
+#
+# main 推送时 docker-publish.yml 也会并行触发（其内含单版本前置检查，
+# 与这里的矩阵重复属设计内：发版安全带，两个 workflow 互不依赖）。
 on:
   push:
     branches: [main]
@@ -8,6 +17,7 @@ on:
   workflow_dispatch:
 
 # 同一分支/PR 的旧一轮检查在新提交到来时自动取消，节省额度
+# （与发版的 docker-publish 并发组互不影响）
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -36,6 +46,7 @@ jobs:
         run: ruff format --check src/
 
   lint-test:
+    # mypy 与 pytest 的结果跟解释器/certbot 版本相关，跑全矩阵
     name: mypy & test (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -62,6 +73,8 @@ jobs:
         run: python -m pytest -v
 
   pre-commit:
+    # 与本地同一套 hook（ruff、check-yaml/toml、尾随空格、文件末尾换行、
+    # 合并冲突标记），保证提交内容与本地检查口径一致
     name: pre-commit
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -77,10 +90,14 @@ jobs:
       - run: pre-commit run --all-files
 
   docker:
-    # PR 不构建镜像（省时）；main 推送时验证镜像构建与插件注册
+    # PR 不构建镜像（省时）；main 推送时等检查全绿后验证镜像构建与插件注册。
+    # 与 docker-publish.yml 的分工：本 job 只构建不推送、不产生版本产物——
+    # 若发版链路的镜像构建失败而本 job 绿色，说明问题在 Hub 登录/推送侧
+    # 而非 Dockerfile 本身，用于辅助定位。
     name: docker build & smoke
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: [lint, lint-test, pre-commit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v5

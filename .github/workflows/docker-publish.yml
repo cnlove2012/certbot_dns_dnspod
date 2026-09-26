@@ -11,7 +11,7 @@ name: Docker Publish
 # 仅其镜像可能未构建——latest 始终由最后一次成功构建决定。
 # 手动补发：Actions → Docker Publish → Run workflow（main 分支）。
 #
-# 需要仓库 secrets：DOCKERHUB_USERNAME / DOCKERHUB_TOKEN（未配置时跳过发布）。
+# 需要仓库 secrets：DOCKERHUB_USERNAME / DOCKERHUB_TOKEN（未配置/失效时 Login 步骤直接报错）。
 on:
   push:
     branches: [main]
@@ -28,9 +28,6 @@ jobs:
     name: pre-release checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      # job 级 if 不可用 secrets context（GitHub 限制），经 output 中转给 publish.if
-      has_secrets: ${{ steps.secrets_check.outputs.has_secrets }}
     steps:
       - uses: actions/checkout@v5
 
@@ -53,24 +50,11 @@ jobs:
       - name: Pytest
         run: python -m pytest -v
 
-      - name: Check Docker Hub secrets
-        id: secrets_check
-        env:
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }} # 走 env 避免明文展开进 shell
-        run: |
-          if [ -n "$DOCKERHUB_TOKEN" ]; then
-            echo "has_secrets=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::未配置 DOCKERHUB_TOKEN secrets，跳过发布"
-            echo "has_secrets=false" >> "$GITHUB_OUTPUT"
-          fi
-
   publish:
     name: tag & release & push image
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: needs.test.outputs.has_secrets == 'true'
     permissions:
       contents: write # 推 tag、写回 version、创建 Release
     steps:
