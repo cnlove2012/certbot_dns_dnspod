@@ -23,7 +23,7 @@
 DNSPod——本插件（及 Docker 镜像）补上这块拼图：申请时自动创建 TXT 记录，
 验证通过后自动删除。
 
-详细用法见 [docs/dockerhub-overview.md](docs/dockerhub-overview.md)（与
+详细用法见 [dockerhub-overview.md](dockerhub-overview.md)（与
 Docker Hub 页面同源）。
 
 ## 凭证获取
