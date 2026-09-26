@@ -1,11 +1,36 @@
-# this file uses slightly different syntax than .gitignore,
-# e.g. ".tox/" will not ignore .tox directory
+# Docker 构建仅需要源码与打包配置进入镜像。
+# 注意：本文件语法与 .gitignore 略有不同（目录不带尾部斜杠亦可生效）。
 
-# well, official docker build should be done on clean git checkout
-# anyway, so .tox should be empty... But I'm sure people will try to
-# test docker on their git working directories.
-
+# 版本控制与 CI
 .git
-.tox
+.github
+
+# AI / 编辑器 / 开发环境配置
+.claude
+CLAUDE.md
+AGENTS.md
+.devcontainer
+.idea
+.vscode
+.editorconfig
+
+# Python 构建产物与缓存
+__pycache__
+*.pyc
+*.egg-info
+.venv
 venv
-docs
+.tox
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
+# certbot 运行时数据（含证书私钥与凭证，绝不进镜像）
+letsencrypt
+*.pem
+credentials.ini
+
+# 仓库元文件
+.gitattributes
+.gitignore
+.dockerignore
