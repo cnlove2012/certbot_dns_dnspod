@@ -28,65 +28,19 @@
 
 > ⚠️ 请像保管密码一样保管该文件。能读取它的任何人都可以操作你的 DNSPod 解析记录。
 
-## 安装
+## 安装与使用（Docker）
 
-```bash
-pip install certbot-dns-dnspod
-```
-
-或从源码安装：
+### 1. 构建镜像
 
 ```bash
 git clone https://github.com/cnlove2012/certbot_dns_dnspod.git
 cd certbot_dns_dnspod
-pip install .
-```
-
-## 使用
-
-签发单域名证书：
-
-```bash
-certbot certonly \
-  --dns-dnspod \
-  --dns-dnspod-credentials ~/dnspod.ini \
-  -d example.com
-```
-
-签发通配符证书：
-
-```bash
-certbot certonly \
-  --dns-dnspod \
-  --dns-dnspod-credentials ~/dnspod.ini \
-  -d example.com \
-  -d "*.example.com"
-```
-
-等待 DNS 传播（国内解析生效通常较快，跨国验证建议加大）：
-
-```bash
-certbot certonly \
-  --dns-dnspod \
-  --dns-dnspod-credentials ~/dnspod.ini \
-  --dns-dnspod-propagation-seconds 600 \
-  -d example.com
-```
-
-续期（certbot 会自动记录插件与凭证路径，配好 cron/systemd 定时执行即可）：
-
-```bash
-certbot renew --dry-run   # 先演练
-certbot renew             # 实际续期
-```
-
-## Docker 使用
-
-```bash
 docker build -t certbot-dns-dnspod .
 ```
 
-单条命令签发（挂载凭证文件与 certbot 工作目录）：
+### 2. 申请证书
+
+签发单域名证书：
 
 ```bash
 docker run --rm \
@@ -100,7 +54,7 @@ docker run --rm \
   -d example.com
 ```
 
-续期：
+签发通配符证书（主域名与通配符合并为一张证书）：
 
 ```bash
 docker run --rm \
@@ -108,12 +62,64 @@ docker run --rm \
   -v /var/lib/letsencrypt:/var/lib/letsencrypt \
   -v ~/dnspod.ini:/dnspod.ini:ro \
   certbot-dns-dnspod \
-  renew
+  certonly \
+  --dns-dnspod \
+  --dns-dnspod-credentials /dnspod.ini \
+  -d example.com \
+  -d "*.example.com"
 ```
 
-> 镜像基于官方 `certbot/certbot`（版本固定于 [Dockerfile](Dockerfile) 的
-> `ARG CERTBOT_VERSION`）。`/etc/letsencrypt` 与 `/var/lib/letsencrypt` 分别
-> 保存证书/账户信息与续期状态，请持久化挂载。
+DNS 传播较慢时加大等待（默认 120 秒，跨国验证建议 600）：
+
+```bash
+docker run --rm \
+  -v /etc/letsencrypt:/etc/letsencrypt \
+  -v /var/lib/letsencrypt:/var/lib/letsencrypt \
+  -v ~/dnspod.ini:/dnspod.ini:ro \
+  certbot-dns-dnspod \
+  certonly \
+  --dns-dnspod \
+  --dns-dnspod-credentials /dnspod.ini \
+  --dns-dnspod-propagation-seconds 600 \
+  -d example.com
+```
+
+签发成功后，证书位于宿主机 `/etc/letsencrypt/live/<域名>/` 目录下。
+
+### 3. 续期证书
+
+certbot 会自动记录插件与凭证路径，续期只需 `renew`。建议先演练：
+
+```bash
+docker run --rm \
+  -v /etc/letsencrypt:/etc/letsencrypt \
+  -v /var/lib/letsencrypt:/var/lib/letsencrypt \
+  -v ~/dnspod.ini:/dnspod.ini:ro \
+  certbot-dns-dnspod \
+  renew --dry-run
+```
+
+配好 cron 定时续期（每天检查，到期前 30 天自动续，一年只需成功一次）：
+
+```cron
+17 3 * * * docker run --rm -v /etc/letsencrypt:/etc/letsencrypt -v /var/lib/letsencrypt:/var/lib/letsencrypt -v ~/dnspod.ini:/dnspod.ini:ro certbot-dns-dnspod renew --quiet
+```
+
+> - 镜像基于官方 `certbot/certbot`（版本固定于 [Dockerfile](Dockerfile) 的
+>   `ARG CERTBOT_VERSION`）。
+> - `/etc/letsencrypt` 与 `/var/lib/letsencrypt` 分别保存证书/账户信息与续期状态，
+>   请持久化挂载，否则续期时 certbot 无法找到已有证书。
+
+### 方式二：pip 安装（可选）
+
+`pip install certbot-dns-dnspod` 后可直接使用 `certbot`，参数与上述容器内完全一致：
+
+```bash
+certbot certonly \
+  --dns-dnspod \
+  --dns-dnspod-credentials ~/dnspod.ini \
+  -d example.com
+```
 
 ## 常见问题
 
@@ -127,10 +133,10 @@ docker run --rm \
 
 本项目为 AI 原生开发项目，开发规范与架构说明见 [CLAUDE.md](CLAUDE.md)。
 
-```bash
-python3.12 -m venv .venv && . .venv/bin/activate
-pip install -e ".[test]" ruff mypy pre-commit
+开发环境为 **DevContainer**：VSCode 打开仓库后执行
+*Reopen in Container* 即可（Python 3.12，依赖由 `postCreateCommand` 自动安装）。
 
+```bash
 python -m pytest          # 测试（纯 mock，无需真实凭证）
 ruff check src/           # lint
 mypy src/                 # 类型检查
