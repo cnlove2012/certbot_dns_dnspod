@@ -1,32 +1,112 @@
 name: Docker Publish
 
-# main 推送 → 更新 latest；推送 v* 标签 → 发布对应版本镜像。
-# 需要先在仓库 Settings → Secrets and variables → Actions 配置：
-#   DOCKERHUB_USERNAME  Docker Hub 用户名
-#   DOCKERHUB_TOKEN     Docker Hub 访问令牌（Account Settings → Security →
-#                       Personal access tokens，权限 Read & Write）
-# secrets 未配置时本工作流跳过（显示 skipped 而非失败）。
+# push main（PR 合并或直接 push）即全自动发版：
+#   1. 计算 CalVer 版本（年.周.build，ISO 周，如 v2026.39.1）
+#   2. 立即打 tag 并推送（版本号尽早落库，并发取消时也能保住）
+#   3. 同步 pyproject version 写回 main（chore(release) 提交）
+#   4. 创建 GitHub Release（自动生成变更说明）
+#   5. 构建镜像推送 Docker Hub：版本 tag + latest，拉回冒烟
+#
+# 快速连续 push 时 concurrency 会取消进行中的旧发布：旧版本的 tag 已保留，
+# 仅其镜像可能未构建——latest 始终由最后一次成功构建决定。
+# 手动补发：Actions → Docker Publish → Run workflow（main 分支）。
+#
+# 需要仓库 secrets：DOCKERHUB_USERNAME / DOCKERHUB_TOKEN（未配置时跳过发布）。
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   workflow_dispatch:
 
-# 发布串行化：新构建到来时取消进行中的旧构建，避免乱序覆盖
 concurrency:
   group: docker-publish
   cancel-in-progress: true
 
 jobs:
+  test:
+    # 发版前置安全带：直接 push main 未经 PR CI 时，坏代码不发版
+    # （全 Python 版本矩阵验证由 ci.yml 负责，这里单版本快速把关）
+    name: pre-release checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[test]" ruff mypy
+
+      - name: Ruff
+        run: |
+          ruff check src/
+          ruff format --check src/
+
+      - name: Mypy
+        run: mypy src/
+
+      - name: Pytest
+        run: python -m pytest -v
+
   publish:
-    name: build & push to Docker Hub
+    name: tag & release & push image
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: ${{ secrets.DOCKERHUB_TOKEN != '' }}
     permissions:
-      contents: read
+      contents: write # 推 tag、写回 version、创建 Release
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # 计算周内 build 号需要完整 tag 历史
+
+      - name: Fetch tags
+        run: git fetch --tags -f
+
+      - name: Compute CalVer version (年.周.build)
+        id: ver
+        run: |
+          VERSION=$(python3 - <<'EOF'
+          import datetime
+          import subprocess
+
+          # ISO 周：跨年周归属正确（如 2027-01-01 周五属于 2026-W53），周号无前导零
+          year, week, _ = datetime.date.today().isocalendar()
+          out = subprocess.run(
+              ["git", "tag", "-l", f"v{year}.{week}.*"],
+              capture_output=True, text=True,
+          ).stdout.split()
+          builds = [int(t.rsplit(".", 1)[1]) for t in out if t.rsplit(".", 1)[1].isdigit()]
+          print(f"{year}.{week}.{max(builds, default=0) + 1}")
+          EOF
+          )
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "本次发布版本: v$VERSION"
+
+      # tag 尽早落库：即便后续步骤被并发取消，该次合并的版本号也已保留
+      - name: Push git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.ver.outputs.tag }}"
+          git push origin "${{ steps.ver.outputs.tag }}"
+
+      - name: Sync version to pyproject.toml
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${{ steps.ver.outputs.version }}\"/" pyproject.toml
+          git add pyproject.toml
+          git commit -m "chore(release): ${{ steps.ver.outputs.tag }}"
+          git push # GITHUB_TOKEN 的 push 不触发新 workflow，无死循环
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          generate_release_notes: true
 
       - uses: docker/setup-buildx-action@v3
 
@@ -36,29 +116,20 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # tag 规则：v1.2.3 → 1.2.3；main 分支 → latest
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: cnlove2012/certbot-dns-dnspod
-          tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest,enable={{is_default_branch}}
-
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            cnlove2012/certbot-dns-dnspod:${{ steps.ver.outputs.version }}
+            cnlove2012/certbot-dns-dnspod:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Smoke test（拉取刚推送的镜像验证插件注册）
         run: |
-          IMAGE=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          IMAGE="cnlove2012/certbot-dns-dnspod:${{ steps.ver.outputs.version }}"
           echo "Smoke testing: $IMAGE"
           docker pull "$IMAGE"
           docker run --rm "$IMAGE" --help all 2>/dev/null | grep -A3 'dns-dnspod'

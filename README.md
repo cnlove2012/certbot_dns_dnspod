@@ -47,9 +47,10 @@
 docker pull cnlove2012/certbot-dns-dnspod:latest
 ```
 
-> 生产环境建议固定版本号（如 `docker pull cnlove2012/certbot-dns-dnspod:0.1.0`），
-> 版本号与 [Releases](https://github.com/cnlove2012/certbot_dns_dnspod/releases) 对应；
-> `latest` 跟随 main 分支自动更新。
+> 生产环境建议固定版本号（如 `docker pull cnlove2012/certbot-dns-dnspod:2026.39.1`）。
+> 版本号为 CalVer 格式 `年.周.build`（ISO 周序号），每次合并到 main 自动发布，
+> 与 [Releases](https://github.com/cnlove2012/certbot_dns_dnspod/releases) 一一对应；
+> `latest` 跟随最后一次成功构建。
 
 或从源码本地构建（适合开发或自定义修改）：
 

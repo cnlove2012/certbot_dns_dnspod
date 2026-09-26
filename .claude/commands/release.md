@@ -1,14 +1,17 @@
 ---
-description: 发布新版本（版本 bump → CHANGELOG → tag → 构建 → 校验）
+description: 发版核对 / 手动补发（发版本身已全自动：push main 即 CalVer 发版）
 ---
 
-使用 release-helper 子代理的流程发布一个新版本。
+发版已全自动：push main（PR 合并或直接 push）后 Docker Publish 工作流自动完成
+CalVer 版本计算（年.周.build）→ tag → pyproject 写回 → GitHub Release →
+Docker Hub 版本镜像 + latest → 冒烟。本命令用于**核对发版结果**或**手动补发**。
 
 ## 步骤
 
-1. 先运行一次本地全量检查（等同 /test-plugin），任何失败则终止。
-2. 询问我目标版本号与本次发布的主要内容（用于 CHANGELOG 摘要）。
-3. 委托 release-helper 代理执行完整发布流程（版本 bump、CHANGELOG、tag、
-   sdist/wheel 构建、twine check、Docker 构建冒烟）。
-4. 每个关键节点（版本号写入、tag 创建、构建完成）向我汇报。
-5. 推送到远程（`git push --tags`）前必须获得我的明确确认。
+1. 核对最近发版产物（委托 release-helper 代理执行）：
+   新 tag、docker-publish 工作流状态、GitHub Release、版本镜像冒烟。
+2. 若某次合并未产生版本（如 secrets 失效、权限错），修复根因后补发：
+   `gh workflow run docker-publish.yml --ref main`。
+3. 被取消（cancelled）的 run 属预期——快速连续 push 时旧发布让位，
+   旧 tag 保留、镜像可能缺失，latest 由最后一次成功构建决定。
+4. 详细排查指引见 release-helper 代理定义。

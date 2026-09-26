@@ -47,9 +47,23 @@ pip install -e ".[test]" ruff mypy pre-commit
 ```
 
 CI（.github/workflows/ci.yml）在 Python 3.9–3.13 矩阵上跑 lint+mypy+pytest。
-镜像发布（.github/workflows/docker-publish.yml）：main 推送自动更新 Docker Hub
-`latest`，推送 `v*` 标签自动发布对应版本镜像（需仓库 secrets
-`DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`，未配置时该工作流跳过）。
+
+**自动发版**（.github/workflows/docker-publish.yml）：push main（PR 合并或直接 push）
+即全自动发版，流程为：前置快速检查 job → 计算 CalVer 版本（`年.周.build`，ISO 周，
+如 `v2026.39.1`）→ **立即推 tag**（尽早落库）→ pyproject version 写回 main
+（`chore(release)` 提交，github-actions[bot]）→ GitHub Release（自动变更说明）→
+构建推送 Docker Hub 版本镜像 + `latest` → 拉回冒烟（需仓库 secrets
+`DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`，未配置时跳过发布）。
+
+发版语义要点（设计取舍，勿"修复"）：
+
+- tag 打在 merge commit 上、写回 version 的 commit 在 tag 之后——version 字段
+  滞后一版属预期（记录性质，运行时无影响）。
+- 快速连续 push 时 `cancel-in-progress: true` 会取消进行中的旧发布：旧版本的
+  tag 已保留、其镜像可能缺失，`latest` 始终由最后一次成功构建决定（用户认可的取舍）。
+- tag/写回/Release 均在同一 workflow 内完成——GITHUB_TOKEN 的 push 不触发其他
+  workflow（GitHub 防递归），拆开会导致镜像构建不触发。
+- 手动补发：Actions → Docker Publish → Run workflow（main 分支）。
 
 ## 架构
 
