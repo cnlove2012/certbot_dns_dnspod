@@ -1,6 +1,7 @@
 # certbot-dns-dnspod
 
 [![CI](https://github.com/cnlove2012/certbot_dns_dnspod/actions/workflows/ci.yml/badge.svg)](https://github.com/cnlove2012/certbot_dns_dnspod/actions/workflows/ci.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/cnlove2012/certbot-dns-dnspod.svg)](https://hub.docker.com/r/cnlove2012/certbot-dns-dnspod)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -38,18 +39,30 @@
 
 ## 安装与使用（Docker）
 
-### 1. 构建镜像
+### 1. 获取镜像
+
+直接使用 [Docker Hub](https://hub.docker.com/r/cnlove2012/certbot-dns-dnspod) 上的现成镜像（推荐）：
+
+```bash
+docker pull cnlove2012/certbot-dns-dnspod:latest
+```
+
+或从源码本地构建（适合开发或自定义修改）：
 
 ```bash
 git clone https://github.com/cnlove2012/certbot_dns_dnspod.git
 cd certbot_dns_dnspod
-docker build -t certbot-dns-dnspod .
+docker build -t certbot-dns-dnspod:dev .
 ```
+
+> 下文示例统一使用 Hub 镜像 `cnlove2012/certbot-dns-dnspod`；
+> 若使用本地构建，请将其替换为 `certbot-dns-dnspod:dev`。
 
 ### 2. 申请证书
 
-以下命令均在仓库根目录执行：将 `./certbot/letsencrypt/` 整体挂载为容器的
-`/etc/letsencrypt`（凭证、证书、账户信息都在其中），容器内通过
+以下命令在含 `./certbot/letsencrypt/` 数据目录的位置执行（按上文"凭证获取"
+操作后即位于仓库根目录）：该目录整体挂载为容器的 `/etc/letsencrypt`
+（凭证、证书、账户信息都在其中），容器内通过
 `/etc/letsencrypt/.secrets/credentials.ini` 引用凭证。
 
 签发单域名证书：
@@ -57,7 +70,7 @@ docker build -t certbot-dns-dnspod .
 ```bash
 docker run --rm \
   -v ./certbot/letsencrypt/:/etc/letsencrypt/ \
-  certbot-dns-dnspod \
+  cnlove2012/certbot-dns-dnspod \
   certonly \
   --dns-dnspod \
   --dns-dnspod-credentials /etc/letsencrypt/.secrets/credentials.ini \
@@ -69,7 +82,7 @@ docker run --rm \
 ```bash
 docker run --rm \
   -v ./certbot/letsencrypt/:/etc/letsencrypt/ \
-  certbot-dns-dnspod \
+  cnlove2012/certbot-dns-dnspod \
   certonly \
   --dns-dnspod \
   --dns-dnspod-credentials /etc/letsencrypt/.secrets/credentials.ini \
@@ -82,7 +95,7 @@ DNS 传播较慢时加大等待（默认 120 秒，跨国验证建议 600）：
 ```bash
 docker run --rm \
   -v ./certbot/letsencrypt/:/etc/letsencrypt/ \
-  certbot-dns-dnspod \
+  cnlove2012/certbot-dns-dnspod \
   certonly \
   --dns-dnspod \
   --dns-dnspod-credentials /etc/letsencrypt/.secrets/credentials.ini \
@@ -99,14 +112,14 @@ certbot 会自动记录插件与凭证路径，续期只需 `renew`。建议先�
 ```bash
 docker run --rm \
   -v ./certbot/letsencrypt/:/etc/letsencrypt/ \
-  certbot-dns-dnspod \
+  cnlove2012/certbot-dns-dnspod \
   renew --dry-run
 ```
 
 配好 cron 定时续期（每天检查，到期前 30 天自动续，一年只需成功一次）：
 
 ```cron
-17 3 * * * docker run --rm -v $HOME/certbot/letsencrypt/:/etc/letsencrypt/ certbot-dns-dnspod renew --quiet
+17 3 * * * docker run --rm -v $HOME/certbot/letsencrypt/:/etc/letsencrypt/ cnlove2012/certbot-dns-dnspod renew --quiet
 ```
 
 > - cron 中必须使用绝对路径（`$HOME/...`），`./` 相对路径在 cron 环境下无法解析；
@@ -115,7 +128,7 @@ docker run --rm \
 >   `ARG CERTBOT_VERSION`）。
 > - 排查续期问题时可加挂日志目录：`-v ./certbot/logs/:/var/log/letsencrypt/`。
 
-### 方式二：pip 安装（可选）
+## 附：pip 安装（可选）
 
 `pip install certbot-dns-dnspod` 后可直接使用 `certbot`，参数与上述容器内完全一致：
 
