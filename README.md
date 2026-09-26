@@ -9,6 +9,23 @@
 通过腾讯云 DNSPod API 自动创建与删除 `_acme-challenge` TXT 记录，完成 ACME
 `dns-01` 挑战——**支持通配符证书**（如 `*.example.com`）。
 
+## 背景：certbot 与 DNS-01 挑战
+
+[Certbot](https://certbot.eff.org/) 是 EFF（电子前哨基金会）维护的开源工具，
+用于从 [Let's Encrypt](https://letsencrypt.org/) 免费签发 HTTPS 证书并自动续期
+（证书有效期 90 天，到期前 30 天可续）。Let's Encrypt 通过"挑战"验证域名所有权，
+其中 DNS-01 方式只需在域名解析中临时创建一条 TXT 记录：
+
+- 无需公网可达的 80 端口，内网/离线机器也能签发证书
+- 是签发**通配符证书**（`*.example.com`）的唯一途径
+
+官方 certbot 内置 Cloudflare、Route53 等国际 DNS 服务商插件，但不支持
+DNSPod——本插件（及 Docker 镜像）补上这块拼图：申请时自动创建 TXT 记录，
+验证通过后自动删除。
+
+详细用法见 [docs/dockerhub-overview.md](docs/dockerhub-overview.md)（与
+Docker Hub 页面同源）。
+
 ## 凭证获取
 
 1. 登录 [腾讯云控制台](https://console.cloud.tencent.com/)，进入
@@ -70,6 +87,10 @@ docker build -t certbot-dns-dnspod:dev .
 （凭证、证书、账户信息都在其中），容器内通过
 `/etc/letsencrypt/.secrets/credentials.ini` 引用凭证。
 
+首次申请需提供邮箱（用于 Let's Encrypt 账号注册与到期提醒）并同意服务条款；
+账号注册一次即可，后续续期不再需要这些参数。`-n` 为非交互模式
+（容器环境无终端，交互式询问会导致失败）。
+
 签发单域名证书：
 
 ```bash
@@ -79,6 +100,9 @@ docker run --rm \
   certonly \
   --dns-dnspod \
   --dns-dnspod-credentials /etc/letsencrypt/.secrets/credentials.ini \
+  --email you@example.com \
+  --agree-tos \
+  -n \
   -d example.com
 ```
 
@@ -91,22 +115,15 @@ docker run --rm \
   certonly \
   --dns-dnspod \
   --dns-dnspod-credentials /etc/letsencrypt/.secrets/credentials.ini \
+  --email you@example.com \
+  --agree-tos \
+  -n \
   -d example.com \
   -d "*.example.com"
 ```
 
-DNS 传播较慢时加大等待（默认 120 秒，跨国验证建议 600）：
-
-```bash
-docker run --rm \
-  -v ./certbot/letsencrypt/:/etc/letsencrypt/ \
-  cnlove2012/certbot-dns-dnspod \
-  certonly \
-  --dns-dnspod \
-  --dns-dnspod-credentials /etc/letsencrypt/.secrets/credentials.ini \
-  --dns-dnspod-propagation-seconds 600 \
-  -d example.com
-```
+DNS 传播较慢时加大等待（默认 120 秒，跨国验证建议 600），在上述命令中加：
+`--dns-dnspod-propagation-seconds 600`
 
 签发成功后，证书位于宿主机 `./certbot/letsencrypt/live/<域名>/` 目录下。
 
@@ -141,6 +158,9 @@ docker run --rm \
 certbot certonly \
   --dns-dnspod \
   --dns-dnspod-credentials ./certbot/letsencrypt/.secrets/credentials.ini \
+  --email you@example.com \
+  --agree-tos \
+  -n \
   -d example.com
 ```
 
