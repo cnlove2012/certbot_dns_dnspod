@@ -16,11 +16,11 @@ ACME dns-01 挑战（支持通配符证书）。
 
 ## 常用命令
 
-```bash
-# 环境（本地用 python3.12）
-python3.12 -m venv .venv && . .venv/bin/activate
-pip install -e ".[test]" ruff mypy pre-commit
+**本项目以 DevContainer 为主要开发环境**（`.devcontainer/devcontainer.json`，
+Python 3.12-bookworm）。在容器内依赖已由 `postCreateCommand` 装好
+（`pip install -e '.[test]' ruff mypy pre-commit` + pre-commit hook），命令直接执行：
 
+```bash
 # 测试（纯 mock，无网络、无真实凭证）
 python -m pytest
 
@@ -37,6 +37,13 @@ pip install build && python -m build   # 产出 dist/ 下 sdist+wheel
 docker build -t certbot-dns-dnspod:dev .
 # 冒烟：容器内 certbot 应能发现 dns-dnspod 插件
 docker run --rm certbot-dns-dnspod:dev --help all 2>/dev/null | grep -A3 dns-dnspod
+```
+
+若在宿主机（macOS）临时开发，需自建环境后再执行上述命令：
+
+```bash
+python3.12 -m venv .venv && . .venv/bin/activate
+pip install -e ".[test]" ruff mypy pre-commit
 ```
 
 CI（.github/workflows/ci.yml）在 Python 3.9–3.13 矩阵上跑 lint+mypy+pytest。

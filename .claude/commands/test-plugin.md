@@ -6,8 +6,10 @@ description: 本地全量质量检查（ruff + mypy + pytest + pre-commit）
 
 ## 步骤
 
-1. 确认虚拟环境存在（`.venv/`），不存在则用 `python3.12 -m venv .venv` 创建并
-   `pip install -e ".[test]" ruff mypy pre-commit`。
+1. 确认开发环境就绪：本项目以 DevContainer 开发（Python 3.12，
+   postCreateCommand 已安装依赖）。先运行 `python -c "import certbot_dns_dnspod"`
+   探测；若模块缺失（例如在宿主机裸环境），先执行
+   `pip install -e '.[test]' ruff mypy pre-commit` 补装。
 2. 依序执行以下命令，逐条记录通过/失败：
    ```bash
    ruff check src/
