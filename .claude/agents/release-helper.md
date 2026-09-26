@@ -29,9 +29,11 @@ tools: Read, Write, Edit, Bash
    - `twine check dist/*` 通过。
    - 检查 sdist 内不含任何敏感文件（`tar -tzf dist/*.tar.gz | grep -E '\.pem|credentials|letsencrypt'` 应为空）。
 
-6. **Docker 验证**
-   - `docker build -t certbot-dns-dnspod:vX.Y.Z .`
-   - 冒烟：`docker run --rm certbot-dns-dnspod:vX.Y.Z --help all 2>/dev/null | grep dns-dnspod`
+6. **Docker 镜像（CI 自动发布）**
+   - tag `vX.Y.Z` 推送后，docker-publish 工作流自动构建并推送
+     `cnlove2012/certbot-dns-dnspod:X.Y.Z` 与 `latest` 到 Docker Hub
+     （需仓库 secrets `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`）。
+   - 推送后查看 GitHub Actions 等待工作流完成，再在 Hub 页面确认镜像存在。
 
 7. **推送（需用户确认）**
    - `git push origin main --tags`——推送前必须获得用户明确同意。

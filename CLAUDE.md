@@ -47,6 +47,9 @@ pip install -e ".[test]" ruff mypy pre-commit
 ```
 
 CI（.github/workflows/ci.yml）在 Python 3.9–3.13 矩阵上跑 lint+mypy+pytest。
+镜像发布（.github/workflows/docker-publish.yml）：main 推送自动更新 Docker Hub
+`latest`，推送 `v*` 标签自动发布对应版本镜像（需仓库 secrets
+`DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`，未配置时该工作流跳过）。
 
 ## 架构
 
