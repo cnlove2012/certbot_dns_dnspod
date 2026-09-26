@@ -10,11 +10,18 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+  workflow_dispatch:
+
+# 发布串行化：新构建到来时取消进行中的旧构建，避免乱序覆盖
+concurrency:
+  group: docker-publish
+  cancel-in-progress: true
 
 jobs:
   publish:
     name: build & push to Docker Hub
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: ${{ secrets.DOCKERHUB_TOKEN != '' }}
     permissions:
       contents: read
