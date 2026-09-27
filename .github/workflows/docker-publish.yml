@@ -1,6 +1,7 @@
 name: Docker Publish
 
-# push main（PR 合并或直接 push）即全自动发版：
+# push main（PR 合并或直接 push）且含非文档类改动时全自动发版——
+# 纯文档/AI 配置改动跳过（不打 tag、不占 build 号，豁免列表与 ci.yml 一致）：
 #   1. 计算 CalVer 版本（年.周.build，ISO 周，如 v2026.39.1）
 #   2. 立即打 tag 并推送（版本号尽早落库，并发取消时也能保住）
 #   3. 同步 pyproject version 写回 main（chore(release) 提交）
@@ -18,6 +19,11 @@ name: Docker Publish
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".claude/**"
+      - ".devcontainer/**"
+      - "LICENSE.txt"
   workflow_dispatch:
 
 concurrency:

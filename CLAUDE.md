@@ -49,16 +49,21 @@ pip install -e ".[test]" ruff mypy pre-commit
 CI（.github/workflows/ci.yml）在 Python 3.9–3.13 矩阵上跑 lint+mypy+pytest。
 
 **自动发版**（.github/workflows/docker-publish.yml）：push main（PR 合并或直接 push）
-即全自动发版，流程为：前置快速检查 job → 计算 CalVer 版本（`年.周.build`，ISO 周，
-如 `v2026.39.1`）→ **立即推 tag**（尽早落库）→ pyproject version 写回 main
-（`chore(release)` 提交，github-actions[bot]）→ GitHub Release（自动变更说明）→
-一次构建双推送 Docker Hub 与阿里云 ACR 杭州（registry.cn-hangzhou.aliyuncs.com/
-cnlove2012/certbot-dns-dnspod），各推版本镜像 + `latest`，Docker Hub 拉回冒烟
-（需仓库 secrets `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`、`ALIYUN_REGISTRY_USERNAME`/
-`ALIYUN_REGISTRY_PASSWORD`，未配置/失效时对应 Login 步骤直接报错）。构建必须
-`provenance: false`——attestation 的 `oci.empty.v1+json` 空层不被阿里云 ACR 个人版识别。
+**且含非文档类改动**时全自动发版——纯文档/AI 配置改动跳过（不打 tag、不占 build 号，
+`paths-ignore` 豁免列表与 ci.yml 一致）。流程为：前置快速检查 job → 计算 CalVer 版本
+（`年.周.build`，ISO 周，如 `v2026.39.1`）→ **立即推 tag**（尽早落库）→ pyproject
+version 写回 main（`chore(release)` 提交，github-actions[bot]）→ GitHub Release
+（自动变更说明）→ 一次构建双推送 Docker Hub 与阿里云 ACR 杭州
+（registry.cn-hangzhou.aliyuncs.com/cnlove2012/certbot-dns-dnspod），各推版本镜像 +
+`latest`，Docker Hub 拉回冒烟（需仓库 secrets `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`、
+`ALIYUN_REGISTRY_USERNAME`/`ALIYUN_REGISTRY_PASSWORD`，未配置/失效时对应 Login 步骤
+直接报错）。构建必须 `provenance: false`——attestation 的 `oci.empty.v1+json` 空层
+不被阿里云 ACR 个人版识别。
 
 发版语义要点（设计取舍，勿"修复"）：
+
+- **仅必要变更发版**（2026-09-27 决策，取代早期"每合并必发版"）：纯文档类 push
+  不触发发版、不占 build 号；确需发布时 workflow_dispatch 手动补发。
 
 - tag 打在 merge commit 上、写回 version 的 commit 在 tag 之后——version 字段
   滞后一版属预期（记录性质，运行时无影响）。

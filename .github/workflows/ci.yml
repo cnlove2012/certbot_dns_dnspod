@@ -13,7 +13,8 @@ name: CI
 # 路径过滤用黑名单（paths-ignore）而非白名单：只豁免纯文档/AI 配置类改动，
 # 其余任何变化（源码、pyproject、Dockerfile、pre-commit 配置等）都照常验证，
 # 新增文件自动覆盖，避免白名单漏配导致漏跑。
-# 纯文档合并跳过本 CI 时，发版 workflow 的前置检查 job 仍会验证代码——安全带仍在。
+# 纯文档合并同样跳过发版 workflow（docker-publish，豁免列表与本文件一致）——
+# 无代码变化即无验证与发布需求；确需发布可 workflow_dispatch 手动补发。
 on:
   push:
     branches: [main]

@@ -33,7 +33,8 @@ DNSPod（腾讯云）。本镜像在官方 certbot 之上加入了 `dns-dnspod` 
 ## Tags
 
 - `latest` — 跟随 main 分支最后一次成功构建
-- `年.周.build`（CalVer，如 `2026.39.1`）— 每次合并到 main 自动发布，与
+- `年.周.build`（CalVer，如 `2026.39.1`）— 代码或配置变更合并后自动发布
+  （纯文档改动不发版），与
   [GitHub Releases](https://github.com/cnlove2012/certbot_dns_dnspod/releases)
   一一对应。生产环境建议固定版本号。
 
