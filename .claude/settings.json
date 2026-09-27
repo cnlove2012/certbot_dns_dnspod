@@ -20,7 +20,6 @@
       "Read(**/*.pem)",
       "Read(credentials.ini)",
       "Read(**/credentials.ini)",
-      "Read(dns_pord.py)",
       "Read(.env)"
     ]
   },

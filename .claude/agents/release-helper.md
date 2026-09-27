@@ -25,7 +25,8 @@ docker pull cnlove2012/certbot-dns-dnspod:<版本> && \
 ```
 
 注意：被取消（cancelled）的 run 属预期——快速连续 push 时旧发布让位给新发布，
-旧 tag 保留、其镜像可能缺失，latest 由最后一次成功构建决定。
+旧 tag 保留、其镜像可能缺失，latest 由最后一次成功构建决定。纯文档类合并不触发
+发版也属预期（paths-ignore 豁免，不占 build 号）——确需发布时手动补发一版。
 
 ## 2. 手动补发
 

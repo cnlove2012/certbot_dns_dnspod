@@ -1,23 +1,27 @@
 name: Docker Publish
 
-# push main（PR 合并或直接 push）即全自动发版：
+# push main（PR 合并或直接 push）且含非文档类改动时全自动发版——
+# 纯文档/AI 配置改动跳过（不打 tag、不占 build 号，豁免列表与 ci.yml 一致）：
 #   1. 计算 CalVer 版本（年.周.build，ISO 周，如 v2026.39.1）
 #   2. 立即打 tag 并推送（版本号尽早落库，并发取消时也能保住）
 #   3. 同步 pyproject version 写回 main（chore(release) 提交）
 #   4. 创建 GitHub Release（自动生成变更说明）
-#   5. 一次构建双推送 Docker Hub 与阿里云 ACR（杭州）：各推版本 tag + latest，
-#      Docker Hub 拉回冒烟
+#   5. 构建推送 Docker Hub（版本 tag + latest）并拉回冒烟
 #
 # 快速连续 push 时 concurrency 会取消进行中的旧发布：旧版本的 tag 已保留，
 # 仅其镜像可能未构建——latest 始终由最后一次成功构建决定。
 # 手动补发：Actions → Docker Publish → Run workflow（main 分支）。
 #
-# 需要仓库 secrets：DOCKERHUB_USERNAME / DOCKERHUB_TOKEN、
-# ALIYUN_REGISTRY_USERNAME / ALIYUN_REGISTRY_PASSWORD（任一未配置/失效时
-# 对应 Login 步骤直接报错）。
+# 需要仓库 secrets：DOCKERHUB_USERNAME / DOCKERHUB_TOKEN
+# （未配置/失效时 Login 步骤直接报错）。
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".claude/**"
+      - ".devcontainer/**"
+      - "LICENSE.txt"
   workflow_dispatch:
 
 concurrency:
@@ -118,26 +122,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Login to Aliyun Registry
-        uses: docker/login-action@v3
-        with:
-          registry: registry.cn-hangzhou.aliyuncs.com
-          username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
-          password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
-
-      - name: Build and push（一次构建双推送：Docker Hub + 阿里云 ACR 杭州）
+      - name: Build and push（Docker Hub）
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           # 关闭 provenance/attestation：其附带的 oci.empty.v1+json 空层描述符
-          # （OCI 1.1）不被阿里云 ACR 个人版识别，会导致 manifest 推送失败
+          # （OCI 1.1）不被部分 registry 识别——镜像可能
+          # 被手动同步到这类 registry，构建产物保持传统 OCI 格式以保兼容
           provenance: false
           tags: |
             cnlove2012/certbot-dns-dnspod:${{ steps.ver.outputs.version }}
             cnlove2012/certbot-dns-dnspod:latest
-            registry.cn-hangzhou.aliyuncs.com/cnlove2012/certbot-dns-dnspod:${{ steps.ver.outputs.version }}
-            registry.cn-hangzhou.aliyuncs.com/cnlove2012/certbot-dns-dnspod:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
