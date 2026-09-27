@@ -9,11 +9,26 @@ name: CI
 #
 # main 推送时 docker-publish.yml 也会并行触发（其内含单版本前置检查，
 # 与这里的矩阵重复属设计内：发版安全带，两个 workflow 互不依赖）。
+#
+# 路径过滤用黑名单（paths-ignore）而非白名单：只豁免纯文档/AI 配置类改动，
+# 其余任何变化（源码、pyproject、Dockerfile、pre-commit 配置等）都照常验证，
+# 新增文件自动覆盖，避免白名单漏配导致漏跑。
+# 纯文档合并跳过本 CI 时，发版 workflow 的前置检查 job 仍会验证代码——安全带仍在。
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".claude/**"
+      - ".devcontainer/**"
+      - "LICENSE.txt"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".claude/**"
+      - ".devcontainer/**"
+      - "LICENSE.txt"
   workflow_dispatch:
 
 # 同一分支/PR 的旧一轮检查在新提交到来时自动取消，节省额度
