@@ -177,13 +177,43 @@ certbot certonly \
 
 本项目为 AI 原生开发项目，开发规范与架构说明见 [CLAUDE.md](CLAUDE.md)。
 
-开发环境为 **DevContainer**：VSCode 打开仓库后执行
-*Reopen in Container* 即可（Python 3.12，依赖由 `postCreateCommand` 自动安装）。
+### 环境搭建
+
+**方式一：DevContainer（推荐）**
+
+VSCode 打开仓库后，命令面板（`Cmd+Shift+P` / `Ctrl+Shift+P`）执行
+*Dev-Containers: Reopen in Container*。容器为 Python 3.12-bookworm，
+项目依赖与开发工具由 `postCreateCommand` 自动安装：
+
+```bash
+pip install -e '.[test]' ruff mypy pre-commit && pre-commit install
+```
+
+> ⚠️ `postCreateCommand` **只在容器创建时执行一次**：修改
+> `.devcontainer/devcontainer.json` 或切换分支后发现依赖缺失时，执行
+> *Dev-Containers: Rebuild Container* 重建容器（Reopen 不会重新安装）；
+> 也可以在容器内手动执行上面的命令重装。
+
+**方式二：本地虚拟环境**
+
+```bash
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -e ".[test]" ruff mypy pre-commit
+```
+
+依赖统一由 [pyproject.toml](pyproject.toml) 管理：`pip install -e .`
+以可编辑模式安装本插件及运行依赖（acme / certbot / 腾讯云 SDK），
+`[test]` 额外安装测试依赖（pytest）；ruff / mypy / pre-commit 为开发
+工具，按需单独安装。
+
+### 常用检查命令
 
 ```bash
 python -m pytest          # 测试（纯 mock，无需真实凭证）
 ruff check src/           # lint
+ruff format --check src/  # 格式检查
 mypy src/                 # 类型检查
+pre-commit run --all-files
 ```
 
 ## 许可证
