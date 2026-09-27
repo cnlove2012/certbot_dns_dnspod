@@ -52,8 +52,11 @@ CI（.github/workflows/ci.yml）在 Python 3.9–3.13 矩阵上跑 lint+mypy+pyt
 即全自动发版，流程为：前置快速检查 job → 计算 CalVer 版本（`年.周.build`，ISO 周，
 如 `v2026.39.1`）→ **立即推 tag**（尽早落库）→ pyproject version 写回 main
 （`chore(release)` 提交，github-actions[bot]）→ GitHub Release（自动变更说明）→
-构建推送 Docker Hub 版本镜像 + `latest` → 拉回冒烟（需仓库 secrets
-`DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`，未配置/失效时 Login 步骤直接报错）。
+一次构建双推送 Docker Hub 与阿里云 ACR 杭州（registry.cn-hangzhou.aliyuncs.com/
+cnlove2012/certbot-dns-dnspod），各推版本镜像 + `latest`，Docker Hub 拉回冒烟
+（需仓库 secrets `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`、`ALIYUN_REGISTRY_USERNAME`/
+`ALIYUN_REGISTRY_PASSWORD`，未配置/失效时对应 Login 步骤直接报错）。构建必须
+`provenance: false`——attestation 的 `oci.empty.v1+json` 空层不被阿里云 ACR 个人版识别。
 
 发版语义要点（设计取舍，勿"修复"）：
 
