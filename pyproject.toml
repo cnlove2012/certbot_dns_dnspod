@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "certbot-dns-dnspod"
-version = "2026.39.3"
+version = "2026.39.4"
 description = "DNSPod (Tencent Cloud) DNS Authenticator plugin for Certbot"
 readme = "README.md"
 requires-python = ">=3.9"
