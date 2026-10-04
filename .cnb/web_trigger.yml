@@ -1,0 +1,31 @@
+# 分支详情页自定义按钮：手动触发 Docker 镜像构建并推送至 CNB 制品库
+# 对应 .cnb.yml 中的 web_trigger_docker_publish 事件
+branch:
+  # 主分支：显示「构建并推送镜像」按钮
+  - reg: ^main$
+    buttons:
+      - name: 构建镜像并推送
+        description: 构建 Docker 镜像并推送至 CNB 制品库（CalVer 版本 tag + latest）
+        event: web_trigger_docker_publish
+        groupName: Docker 制品
+        inputs:
+          version:
+            name: 版本号（可选）
+            description: 留空则按 CalVer 自动计算（年.周.build）；填写后覆盖，如 2026.40.5
+            type: input
+            required: false
+            placeholder: 留空自动计算
+
+  # 其余分支兜底：同样提供按钮，便于从任意分支手动构建
+  - buttons:
+      - name: 构建镜像并推送
+        description: 构建 Docker 镜像并推送至 CNB 制品库（CalVer 版本 tag + latest）
+        event: web_trigger_docker_publish
+        groupName: Docker 制品
+        inputs:
+          version:
+            name: 版本号（可选）
+            description: 留空则按 CalVer 自动计算（年.周.build）；填写后覆盖，如 2026.40.5
+            type: input
+            required: false
+            placeholder: 留空自动计算

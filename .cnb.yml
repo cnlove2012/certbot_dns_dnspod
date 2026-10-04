@@ -1,0 +1,72 @@
+# CNB 流水线配置
+#
+# 本文件用于「手动构建 Docker 镜像并推送至 CNB 制品库」：
+#   1. 在「代码-分支详情页」点击自定义按钮触发（按钮配置见 .cnb/web_trigger.yml）
+#   2. 计算 CalVer 版本号（年.周.build，ISO 周，如 v2026.40.1），与 GitHub Actions 发版口径一致
+#   3. docker buildx 构建镜像并推送版本 tag 与 latest 到 CNB Docker 制品库
+#
+# 制品路径：${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}[:版本|:latest]
+# 例如：docker.cnb.cool/cnlove2012/certbot-dns-dnspod:v2026.40.1
+#
+# 说明：本流水线只做镜像构建推送，不打 git tag、不写回 pyproject——
+# 版本号（git tag / pyproject）由 GitHub Actions「Docker Publish」统一负责。
+
+# web_trigger 事件挂在 $ 兜底分支下，所有分支详情页均可触发
+$:
+  web_trigger_docker_publish:
+    - name: build-and-push-image
+      services:
+        - docker
+      env:
+        # 镜像命名空间（小写），同名制品路径
+        IMAGE_REPO: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}
+      stages:
+        # 计算 CalVer 版本：取当前 ISO 周内已有的最大 build 号 + 1
+        # 逻辑与 .github/workflows/docker-publish.yml 保持一致
+        - name: compute-calver
+          script: |
+            set -euo pipefail
+            # 拉取全部 tag（流水线默认检出可能不含 tag 历史）
+            git fetch --tags -f >/dev/null 2>&1 || true
+
+            # 支持手动输入版本覆盖：在触发按钮中填写 version 即可
+            if [ -n "${version:-}" ]; then
+              VERSION="${version#v}"
+            else
+              # ISO 年.周，跨年周归属正确；周号不补零（%V 会补成 06），
+              # 与 GitHub Actions 的 Python isocalendar().week 口径一致
+              ISO_YEAR=$(date -u +%G)
+              ISO_WEEK=$(date -u +%V | sed 's/^0//')
+              MAX_BUILD=$(git tag -l "v${ISO_YEAR}.${ISO_WEEK}.*" \
+                | sed -E 's/^v[0-9]+\.[0-9]+\.//' \
+                | grep -E '^[0-9]+$' \
+                | sort -n | tail -1 || true)
+              VERSION="${ISO_YEAR}.${ISO_WEEK}.$(( ${MAX_BUILD:-0} + 1 ))"
+            fi
+
+            echo "本次构建版本: v${VERSION}"
+          exports:
+            info: VERSION
+
+        # 显式登录 CNB 制品库：services: docker 已自动登录，此处兜底覆盖
+        - name: docker-login
+          script: |
+            set -euo pipefail
+            echo "${CNB_TOKEN}" | docker login -u "${CNB_TOKEN_USER_NAME}" --password-stdin "${CNB_DOCKER_REGISTRY}"
+
+        # 构建并推送：版本 tag + latest；单架构 amd64，与 GitHub 发版口径一致
+        - name: docker-build-push
+          script: |
+            set -euo pipefail
+            docker buildx build \
+              --provenance=false \
+              -t "${IMAGE_REPO}:v${VERSION}" \
+              -t "${IMAGE_REPO}:latest" \
+              --push .
+
+        # 冒烟测试：拉回刚推送的镜像，确认 dns-dnspod 插件已注册
+        - name: smoke-test
+          script: |
+            set -euo pipefail
+            docker pull "${IMAGE_REPO}:v${VERSION}"
+            docker run --rm "${IMAGE_REPO}:v${VERSION}" --help all 2>/dev/null | grep -A3 'dns-dnspod'
